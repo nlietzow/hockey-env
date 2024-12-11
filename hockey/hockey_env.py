@@ -340,8 +340,9 @@ class HockeyEnv(gym.Env, EzPickle):
 
     return goal
 
-  def reset(self, one_starting=None, mode=None):
+  def reset(self, one_starting=None, mode=None, seed=None, options=None):
     self._destroy()
+    self.seed(seed)
     self.world.contactListener_keepref = ContactDetector(self, verbose=self.verbose)
     self.world.contactListener = self.world.contactListener_keepref
     self.done = False
