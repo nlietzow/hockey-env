@@ -632,7 +632,7 @@ class HockeyEnv(gym.Env, EzPickle):
 
 
   def discrete_to_continous_action(self, discrete_action):
-    ''' converts discrete actions into continuous ones (for each player)
+    ''' converts discrete actions into continuous ones (for one player)
         The actions allow only one operation each timestep, e.g. X or Y or angle change.
         This is surely limiting. Other discrete actions are possible
         Action 0: do nothing
