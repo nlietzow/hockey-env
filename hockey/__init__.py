@@ -1,1 +1,1 @@
-from . import hockey_env
+from hockey import hockey_env
