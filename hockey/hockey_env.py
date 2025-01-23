@@ -63,46 +63,46 @@ class ContactDetector(contactListener):
 
     def BeginContact(self, contact):
         if (
-            self.env.goal_player_2 == contact.fixtureA.body
-            or self.env.goal_player_2 == contact.fixtureB.body
+                self.env.goal_player_2 == contact.fixtureA.body
+                or self.env.goal_player_2 == contact.fixtureB.body
         ):
             if (
-                self.env.puck == contact.fixtureA.body
-                or self.env.puck == contact.fixtureB.body
+                    self.env.puck == contact.fixtureA.body
+                    or self.env.puck == contact.fixtureB.body
             ):
                 if self.verbose:
                     print("Player 1 scored")
                 self.env.done = True
                 self.env.winner = 1
         if (
-            self.env.goal_player_1 == contact.fixtureA.body
-            or self.env.goal_player_1 == contact.fixtureB.body
+                self.env.goal_player_1 == contact.fixtureA.body
+                or self.env.goal_player_1 == contact.fixtureB.body
         ):
             if (
-                self.env.puck == contact.fixtureA.body
-                or self.env.puck == contact.fixtureB.body
+                    self.env.puck == contact.fixtureA.body
+                    or self.env.puck == contact.fixtureB.body
             ):
                 if self.verbose:
                     print("Player 2 scored")
                 self.env.done = True
                 self.env.winner = -1
         if (
-            contact.fixtureA.body == self.env.player1
-            or contact.fixtureB.body == self.env.player1
+                contact.fixtureA.body == self.env.player1
+                or contact.fixtureB.body == self.env.player1
         ) and (
-            contact.fixtureA.body == self.env.puck
-            or contact.fixtureB.body == self.env.puck
+                contact.fixtureA.body == self.env.puck
+                or contact.fixtureB.body == self.env.puck
         ):
             if self.env.keep_mode and self.env.puck.linearVelocity[0] < 0.1:
                 if self.env.player1_has_puck == 0:
                     self.env.player1_has_puck = MAX_TIME_KEEP_PUCK
 
         if (
-            contact.fixtureA.body == self.env.player2
-            or contact.fixtureB.body == self.env.player2
+                contact.fixtureA.body == self.env.player2
+                or contact.fixtureB.body == self.env.player2
         ) and (
-            contact.fixtureA.body == self.env.puck
-            or contact.fixtureB.body == self.env.puck
+                contact.fixtureA.body == self.env.puck
+                or contact.fixtureB.body == self.env.puck
         ):
             if self.env.keep_mode and self.env.puck.linearVelocity[0] > -0.1:
                 if self.env.player2_has_puck == 0:
@@ -124,10 +124,10 @@ class HockeyEnv(gym.Env, EzPickle):
     continuous = False
 
     def __init__(
-        self,
-        keep_mode: bool = True,
-        mode: int | str | Mode = Mode.NORMAL,
-        verbose: bool = False,
+            self,
+            keep_mode: bool = True,
+            mode: int | str | Mode = Mode.NORMAL,
+            verbose: bool = False,
     ):
         """mode: is the game mode: NORMAL, TRAIN_SHOOTING, TRAIN_DEFENSE,
         keep_mode: whether the puck gets catched by the player
@@ -529,24 +529,24 @@ class HockeyEnv(gym.Env, EzPickle):
 
     def _check_boundaries(self, force, player, is_player_one):
         if (
-            (
-                is_player_one
-                and player.position[0] < W / 2 - 210 / SCALE
-                and force[0] < 0
-            )
-            or (
+                (
+                        is_player_one
+                        and player.position[0] < W / 2 - 210 / SCALE
+                        and force[0] < 0
+                )
+                or (
                 not is_player_one
                 and player.position[0] > W / 2 + 210 / SCALE
                 and force[0] > 0
-            )
-            or (is_player_one and player.position[0] > W / 2 and force[0] > 0)
-            or (not is_player_one and player.position[0] < W / 2 and force[0] < 0)
+        )
+                or (is_player_one and player.position[0] > W / 2 and force[0] > 0)
+                or (not is_player_one and player.position[0] < W / 2 and force[0] < 0)
         ):  # Do not leave playing area to the left/right
             vel = player.linearVelocity
             player.linearVelocity[0] = 0
             force[0] = -vel[0]
         if (player.position[1] > H - 1.2 and force[1] > 0) or (
-            player.position[1] < 1.2 and force[1] < 0
+                player.position[1] < 1.2 and force[1] < 0
         ):  # Do not leave playing area to the top/bottom
             vel = player.linearVelocity
             player.linearVelocity[1] = 0
@@ -555,7 +555,7 @@ class HockeyEnv(gym.Env, EzPickle):
         return np.asarray(force, dtype=float)
 
     def _apply_translation_action_with_max_speed(
-        self, player, action, max_speed, is_player_one
+            self, player, action, max_speed, is_player_one
     ):
         velocity = np.asarray(player.linearVelocity)
         speed = np.sqrt(np.sum((velocity) ** 2))
@@ -565,32 +565,32 @@ class HockeyEnv(gym.Env, EzPickle):
             force = -action * FORCEMULTIPLIER
 
         if (is_player_one and player.position[0] > CENTER_X - ZONE) or (
-            not is_player_one and player.position[0] < CENTER_X + ZONE
+                not is_player_one and player.position[0] < CENTER_X + ZONE
         ):  # bounce at the center line
             force[0] = 0
             if is_player_one:
                 if player.linearVelocity[0] > 0:
                     force[0] = (
-                        -2 * player.linearVelocity[0] * player.mass / self.timeStep
+                            -2 * player.linearVelocity[0] * player.mass / self.timeStep
                     )
                 force[0] += (
-                    -1
-                    * (player.position[0] - CENTER_X)
-                    * player.linearVelocity[0]
-                    * player.mass
-                    / self.timeStep
+                        -1
+                        * (player.position[0] - CENTER_X)
+                        * player.linearVelocity[0]
+                        * player.mass
+                        / self.timeStep
                 )
             else:
                 if player.linearVelocity[0] < 0:
                     force[0] = (
-                        -2 * player.linearVelocity[0] * player.mass / self.timeStep
+                            -2 * player.linearVelocity[0] * player.mass / self.timeStep
                     )
                 force[0] += (
-                    1
-                    * (player.position[0] - CENTER_X)
-                    * player.linearVelocity[0]
-                    * player.mass
-                    / self.timeStep
+                        1
+                        * (player.position[0] - CENTER_X)
+                        * player.linearVelocity[0]
+                        * player.mass
+                        / self.timeStep
                 )
 
             player.linearDamping = 20.0
@@ -708,7 +708,7 @@ class HockeyEnv(gym.Env, EzPickle):
             max_reward = -30.0  # max (negative) reward through this proxy
             factor = max_reward / (max_dist * self.max_timesteps / 2)
             reward_closeness_to_puck += (
-                dist_to_puck * factor
+                    dist_to_puck * factor
             )  # Proxy reward for being close to puck in the own half
         # Proxy reward: touch puck
         reward_touch_puck = 0.0
@@ -719,7 +719,7 @@ class HockeyEnv(gym.Env, EzPickle):
         max_reward = 1.0
         factor = max_reward / (self.max_timesteps * MAX_PUCK_SPEED)
         reward_puck_direction = (
-            self.puck.linearVelocity[0] * factor
+                self.puck.linearVelocity[0] * factor
         )  # Puck flies right is good and left not
 
         return {
@@ -738,7 +738,7 @@ class HockeyEnv(gym.Env, EzPickle):
             max_reward = -30.0  # max (negative) reward through this proxy
             factor = max_reward / (max_dist * self.max_timesteps / 2)
             reward_closeness_to_puck += (
-                dist_to_puck * factor
+                    dist_to_puck * factor
             )  # Proxy reward for being close to puck in the own half
         # Proxy reward: touch puck
         reward_touch_puck = 0.0
@@ -749,7 +749,7 @@ class HockeyEnv(gym.Env, EzPickle):
         max_reward = 1.0
         factor = -max_reward / (self.max_timesteps * MAX_PUCK_SPEED)
         reward_puck_direction = (
-            self.puck.linearVelocity[0] * factor
+                self.puck.linearVelocity[0] * factor
         )  # Puck flies left is good and right not
 
         return {
@@ -839,7 +839,7 @@ class HockeyEnv(gym.Env, EzPickle):
         self._apply_rotation_action_with_max_speed(self.player1, action[2])
         player2_idx = 3 if not self.keep_mode else 4
         self._apply_translation_action_with_max_speed(
-            self.player2, action[player2_idx : player2_idx + 2], 10, False
+            self.player2, action[player2_idx: player2_idx + 2], 10, False
         )
         self._apply_rotation_action_with_max_speed(
             self.player2, action[player2_idx + 2]
@@ -857,7 +857,7 @@ class HockeyEnv(gym.Env, EzPickle):
                 self._keep_puck(self.player2)
                 self.player2_has_puck -= 1
                 if (
-                    self.player2_has_puck == 1 or action[player2_idx + 3] > 0.5
+                        self.player2_has_puck == 1 or action[player2_idx + 3] > 0.5
                 ):  # shooting
                     self._shoot(self.player2, False)
                     self.player2_has_puck = 0
@@ -1091,20 +1091,3 @@ class HockeyEnv_BasicOpponent(HockeyEnv):
         a2 = self.opponent.act(ob2)
         action2 = np.hstack([action, a2])
         return super().step(action2)
-
-
-from gymnasium.envs.registration import register
-
-try:
-    register(
-        id="Hockey-v0",
-        entry_point="hockey.hockey_env:HockeyEnv",
-        kwargs={"mode": 0},
-    )
-    register(
-        id="Hockey-One-v0",
-        entry_point="hockey.hockey_env:HockeyEnv_BasicOpponent",
-        kwargs={"mode": 0, "weak_opponent": False},
-    )
-except Exception as e:
-    print(e)
