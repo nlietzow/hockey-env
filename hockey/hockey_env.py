@@ -1,23 +1,21 @@
+import Box2D
+import gymnasium as gym
 import math
 import numpy as np
 
-import Box2D
-
 # noinspection PyUnresolvedReferences
 from Box2D.b2 import (
-    edgeShape,
     circleShape,
+    contactListener,
+    edgeShape,
     fixtureDef,
     polygonShape,
     revoluteJointDef,
-    contactListener,
 )
-
-import gymnasium as gym
+from enum import Enum
 from gymnasium import spaces
 from gymnasium.error import DependencyNotInstalled
-from gymnasium.utils import seeding, EzPickle
-from enum import Enum
+from gymnasium.utils import EzPickle, seeding
 
 # import pyglet
 # from pyglet import gl
@@ -1100,12 +1098,12 @@ from gymnasium.envs.registration import register
 try:
     register(
         id="Hockey-v0",
-        entry_point="laserhockey.hockey_env:HockeyEnv",
+        entry_point="hockey.hockey_env:HockeyEnv",
         kwargs={"mode": 0},
     )
     register(
         id="Hockey-One-v0",
-        entry_point="laserhockey.hockey_env:HockeyEnv_BasicOpponent",
+        entry_point="hockey.hockey_env:HockeyEnv_BasicOpponent",
         kwargs={"mode": 0, "weak_opponent": False},
     )
 except Exception as e:
