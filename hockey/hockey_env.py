@@ -1098,17 +1098,3 @@ class HockeyEnv_BasicOpponent(HockeyEnv):
         a2 = self.opponent.act(ob2)
         action2 = np.hstack([action, a2])
         return super().step(action2)
-
-
-class HockeyEnvSB3Opponent(HockeyEnv):
-    def __init__(self, opponent: BaseAlgorithm):
-        super().__init__(mode=Mode.NORMAL, keep_mode=True)
-        self.opponent = opponent
-        # linear force in (x,y)-direction, torque, and shooting
-        self.action_space = spaces.Box(-1, +1, (4,), dtype=np.float32)
-
-    def step(self, action):
-        ob2 = self.obs_agent_two()
-        a2, _ = model.predict(ob2, deterministic=True)
-        action2 = np.hstack([action, a2])
-        return super().step(action2)
