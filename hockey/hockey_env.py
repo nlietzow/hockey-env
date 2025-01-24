@@ -723,7 +723,15 @@ class HockeyEnv(gym.Env, EzPickle):
             self.puck.linearVelocity[0] * factor
         )  # Puck flies right is good and left not
 
+        if self.winner == 1:  # you won
+            is_success = True
+        elif self.winner == -1:  # opponent won
+            is_success = False
+        else:
+            is_success = None
+
         return {
+            "is_success": is_success,
             "winner": self.winner,
             "reward_closeness_to_puck": float(reward_closeness_to_puck),
             "reward_touch_puck": float(reward_touch_puck),
