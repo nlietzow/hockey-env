@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="hockey",
-    version="2.10",
+    version="2.11",
     description="Simple Hockey Environments",
     url="https://github.com/martius-lab",
     author="Georg Martius, Uni Tuebingen, Autonomous Learning",
