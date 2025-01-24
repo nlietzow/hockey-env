@@ -646,7 +646,8 @@ class HockeyEnv(gym.Env, EzPickle):
                 []
                 if not self.keep_mode
                 else [self.player1_has_puck, self.player2_has_puck]
-            )
+            ),
+            dtype=np.float32,
         )
         return obs
 
