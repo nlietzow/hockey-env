@@ -14,6 +14,10 @@ try:
         entry_point="hockey.hockey_env:HockeyEnv_BasicOpponent",
         kwargs={"mode": 0, "weak_opponent": False},
     )
+    register(
+        id="Hockey-One-SB3-v0",
+        entry_point="hockey.hockey_env:HockeyEnvSB3Opponent",
+    )
     REGISTERED_ENVS = True
 except Exception as e:
     logging.error("Error registering environments in hockey:", e)
