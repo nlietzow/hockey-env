@@ -122,7 +122,7 @@ class Mode(Enum):
 
 
 class HockeyEnv(gym.Env, EzPickle):
-    metadata = {"render.modes": ["human", "rgb_array"], "render_fps": FPS}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": FPS}
 
     continuous = False
 
