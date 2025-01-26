@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="hockey",
-    version="2.16",
+    version="2.17",
     description="Simple Hockey Environments",
     url="https://github.com/martius-lab",
     author="Georg Martius, Uni Tuebingen, Autonomous Learning",
@@ -12,7 +12,7 @@ setup(
     python_requires=">=3.10",
     install_requires=[
         "gymnasium[other]~=1.0.0",
-        "numpy~=2.2.2",
+        "numpy~=1.26.4",
         "box2d-py~=2.3.8",
         "pygame~=2.6.1",
         "stable-baselines3~=2.4.1",
