@@ -1,6 +1,10 @@
+import math
+from enum import Enum
+from pathlib import Path
+from stable_baselines3 import SAC
+
 import Box2D
 import gymnasium as gym
-import math
 import numpy as np
 
 # noinspection PyUnresolvedReferences
@@ -12,7 +16,6 @@ from Box2D.b2 import (
     polygonShape,
     revoluteJointDef,
 )
-from enum import Enum
 from gymnasium import spaces
 from gymnasium.error import DependencyNotInstalled
 from gymnasium.utils import EzPickle, seeding
@@ -1086,28 +1089,27 @@ class HumanOpponent:
         return self.env.discrete_to_continous_action(action)
 
 
-class HockeyEnv_BasicOpponent(HockeyEnv):
-    def __init__(self, mode=Mode.NORMAL, weak_opponent=False):
+class HockeyEnvWithOpponent(HockeyEnv):
+    def __init__(self, checkpoint: Path | None, mode=Mode.NORMAL):
         super().__init__(mode=mode, keep_mode=True)
-        self.opponent = BasicOpponent(weak=weak_opponent)
+
+        if checkpoint is not None:
+            self.sac = SAC.load(checkpoint)
+            self.opponent = None
+        else:
+            self.sac = None
+            self.opponent = BasicOpponent(weak=False)
         # linear force in (x,y)-direction, torque, and shooting
         self.action_space = spaces.Box(-1, +1, (4,), dtype=np.float32)
 
     def step(self, action):
         ob2 = self.obs_agent_two()
-        a2 = self.opponent.act(ob2)
-        action2 = np.hstack([action, a2])
-        return super().step(action2)
 
+        if self.sac is not None:
+            a2, _ = self.sac.predict(ob2)
+        elif self.opponent is not None:
+            a2 = self.opponent.act(ob2)
+        else:
+            raise ValueError("No opponent defined")
 
-class HockeyEnvSB3Opponent(HockeyEnv):
-    def __init__(self, opponent, mode=Mode.NORMAL):
-        super().__init__(mode=mode, keep_mode=True)
-        self.opponent = opponent
-        self.action_space = spaces.Box(-1, +1, (4,), dtype=np.float32)
-
-    def step(self, action):
-        ob2 = self.obs_agent_two()
-        a2 = self.opponent.act(ob2)
-        action2 = np.hstack([action, a2])
-        return super().step(action2)
+        return super().step(np.hstack([action, a2]))
