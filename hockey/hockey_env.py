@@ -2,10 +2,12 @@ import math
 import random
 from enum import Enum
 from pathlib import Path
+import logging
 
 import Box2D
 import gymnasium as gym
 import numpy as np
+
 # noinspection PyUnresolvedReferences
 from Box2D.b2 import (
     circleShape,
@@ -545,10 +547,10 @@ class HockeyEnv(gym.Env, EzPickle):
                 and force[0] < 0
             )
             or (
-            not is_player_one
-            and player.position[0] > W / 2 + 210 / SCALE
-            and force[0] > 0
-        )
+                not is_player_one
+                and player.position[0] > W / 2 + 210 / SCALE
+                and force[0] > 0
+            )
             or (is_player_one and player.position[0] > W / 2 and force[0] > 0)
             or (not is_player_one and player.position[0] < W / 2 and force[0] < 0)
         ):  # Do not leave playing area to the left/right
@@ -856,7 +858,7 @@ class HockeyEnv(gym.Env, EzPickle):
         self._apply_rotation_action_with_max_speed(self.player1, action[2])
         player2_idx = 3 if not self.keep_mode else 4
         self._apply_translation_action_with_max_speed(
-            self.player2, action[player2_idx: player2_idx + 2], 10, False
+            self.player2, action[player2_idx : player2_idx + 2], 10, False
         )
         self._apply_rotation_action_with_max_speed(
             self.player2, action[player2_idx + 2]
@@ -1101,10 +1103,7 @@ class HumanOpponent:
 
 class HockeyEnvWithOpponent(HockeyEnv):
     def __init__(
-        self,
-        opponent_type: OpponentType,
-        checkpoint_dir: Path,
-        mode=Mode.NORMAL
+        self, opponent_type: OpponentType, checkpoint_dir: Path, mode=Mode.NORMAL
     ):
         super().__init__(mode=mode)
 
@@ -1148,11 +1147,11 @@ class HockeyEnvWithOpponent(HockeyEnv):
 
     def _init_best(self):
         fp = self.checkpoint_dir / "best_model.zip"
-        if fp.exists():
+        if fp.exists() and fp.is_file():
             return SAC.load(fp)
 
         return self._init_baseline()
 
     def _init_random(self):
-        cp = random.choice(list(self.checkpoint_dir.glob("*.zip")))
-        return SAC.load(cp)
+        checkpoints = [f for f in self.checkpoint_dir.glob("*.zip") if f.is_file()]
+        return SAC.load(random.choice(checkpoints))
