@@ -1,12 +1,11 @@
 import math
-from enum import Enum
+import random
+from enum import Enum, StrEnum, auto
 from pathlib import Path
-from stable_baselines3 import SAC
 
 import Box2D
 import gymnasium as gym
 import numpy as np
-
 # noinspection PyUnresolvedReferences
 from Box2D.b2 import (
     circleShape,
@@ -19,6 +18,7 @@ from Box2D.b2 import (
 from gymnasium import spaces
 from gymnasium.error import DependencyNotInstalled
 from gymnasium.utils import EzPickle, seeding
+from stable_baselines3 import SAC
 
 # import pyglet
 # from pyglet import gl
@@ -52,6 +52,13 @@ FORCEMULTIPLIER = 6000
 SHOOTFORCEMULTIPLIER = 60
 TORQUEMULTIPLIER = 400
 MAX_PUCK_SPEED = 25
+
+
+class OpponentType(StrEnum):
+    rule_based = auto()
+    baseline = auto()
+    best = auto()
+    random = auto()
 
 
 def dist_positions(p1, p2):
@@ -538,10 +545,10 @@ class HockeyEnv(gym.Env, EzPickle):
                 and force[0] < 0
             )
             or (
-                not is_player_one
-                and player.position[0] > W / 2 + 210 / SCALE
-                and force[0] > 0
-            )
+            not is_player_one
+            and player.position[0] > W / 2 + 210 / SCALE
+            and force[0] > 0
+        )
             or (is_player_one and player.position[0] > W / 2 and force[0] > 0)
             or (not is_player_one and player.position[0] < W / 2 and force[0] < 0)
         ):  # Do not leave playing area to the left/right
@@ -849,7 +856,7 @@ class HockeyEnv(gym.Env, EzPickle):
         self._apply_rotation_action_with_max_speed(self.player1, action[2])
         player2_idx = 3 if not self.keep_mode else 4
         self._apply_translation_action_with_max_speed(
-            self.player2, action[player2_idx : player2_idx + 2], 10, False
+            self.player2, action[player2_idx: player2_idx + 2], 10, False
         )
         self._apply_rotation_action_with_max_speed(
             self.player2, action[player2_idx + 2]
@@ -993,6 +1000,9 @@ class BasicOpponent:
         self.keep_mode = keep_mode
         self.phase = np.random.uniform(0, np.pi)
 
+    def predict(self, obs, verbose=False):
+        return self.act(obs, verbose=verbose), None
+
     def act(self, obs, verbose=False):
         alpha = obs[2]
         p1 = np.asarray([obs[0], obs[1], alpha])
@@ -1090,26 +1100,55 @@ class HumanOpponent:
 
 
 class HockeyEnvWithOpponent(HockeyEnv):
-    def __init__(self, checkpoint: Path | None, mode=Mode.NORMAL):
-        super().__init__(mode=mode, keep_mode=True)
+    def __init__(
+        self,
+        opponent_type: OpponentType,
+        checkpoint_dir: Path,
+        mode=Mode.NORMAL
+    ):
+        super().__init__(mode=mode)
 
-        if checkpoint is not None:
-            self.sac = SAC.load(checkpoint)
-            self.opponent = None
-        else:
-            self.sac = None
-            self.opponent = BasicOpponent(weak=False)
+        self.opponent_type = opponent_type
+        self.checkpoint_dir = checkpoint_dir
+        self.player_2 = self.init_player2()
+
         # linear force in (x,y)-direction, torque, and shooting
         self.action_space = spaces.Box(-1, +1, (4,), dtype=np.float32)
 
     def step(self, action):
         ob2 = self.obs_agent_two()
-
-        if self.sac is not None:
-            a2, _ = self.sac.predict(ob2)
-        elif self.opponent is not None:
-            a2 = self.opponent.act(ob2)
-        else:
-            raise ValueError("No opponent defined")
+        a2, _ = self.player_2.predict(ob2)
 
         return super().step(np.hstack([action, a2]))
+
+    def update_player2(self):
+        if self.opponent_type == OpponentType.best:
+            self.player_2 = self._init_best()
+        elif self.opponent_type == OpponentType.random:
+            self.player_2 = self._init_random()
+
+        return None
+
+    def init_player2(self):
+        if self.opponent_type == OpponentType.rule_based:
+            return self._init_rule_based()
+        if self.opponent_type == OpponentType.baseline:
+            return self._init_baseline()
+        if self.opponent_type == OpponentType.best:
+            return self._init_best()
+
+        return self._init_random()
+
+    @staticmethod
+    def _init_rule_based():
+        return BasicOpponent(weak=False)
+
+    def _init_baseline(self):
+        return SAC.load(self.checkpoint_dir / "baseline.zip")
+
+    def _init_best(self):
+        return SAC.load(self.checkpoint_dir / "best.zip")
+
+    def _init_random(self):
+        cp = random.choice(list(self.checkpoint_dir.glob("*.zip")))
+        return SAC.load(cp)
