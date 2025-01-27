@@ -1147,7 +1147,7 @@ class HockeyEnvWithOpponent(HockeyEnv):
         return SAC.load(self.checkpoint_dir / "baseline.zip")
 
     def _init_best(self):
-        fp = self.checkpoint_dir / "best.zip"
+        fp = self.checkpoint_dir / "best_model.zip"
         if fp.exists():
             return SAC.load(fp)
 
