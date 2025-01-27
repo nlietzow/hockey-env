@@ -1147,7 +1147,11 @@ class HockeyEnvWithOpponent(HockeyEnv):
         return SAC.load(self.checkpoint_dir / "baseline.zip")
 
     def _init_best(self):
-        return SAC.load(self.checkpoint_dir / "best.zip")
+        fp = self.checkpoint_dir / "best.zip"
+        if fp.exists():
+            return SAC.load(fp)
+
+        return self._init_baseline()
 
     def _init_random(self):
         cp = random.choice(list(self.checkpoint_dir.glob("*.zip")))
