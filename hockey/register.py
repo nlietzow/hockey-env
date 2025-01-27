@@ -8,7 +8,7 @@ register(
 register(
     id="Hockey-One-v0",
     entry_point="hockey.hockey_env:HockeyEnvWithOpponent",
-    kwargs={"mode": 0, "checkpoint": None},
+    kwargs={"mode": 0},
 )
 
 REGISTERED_ENVS = ["Hockey-v0", "Hockey-One-v0"]
