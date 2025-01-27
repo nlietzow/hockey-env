@@ -2,7 +2,6 @@ import math
 import random
 from enum import Enum
 from pathlib import Path
-import logging
 
 import Box2D
 import gymnasium as gym
