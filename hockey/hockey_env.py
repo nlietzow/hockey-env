@@ -1,6 +1,6 @@
 import math
 import random
-from enum import Enum, StrEnum, auto
+from enum import Enum
 from pathlib import Path
 
 import Box2D
@@ -54,11 +54,11 @@ TORQUEMULTIPLIER = 400
 MAX_PUCK_SPEED = 25
 
 
-class OpponentType(StrEnum):
-    rule_based = auto()
-    baseline = auto()
-    best = auto()
-    random = auto()
+class OpponentType(Enum):
+    rule_based = "rule_based"
+    baseline = "baseline"
+    best = "best"
+    random = "random"
 
 
 def dist_positions(p1, p2):
