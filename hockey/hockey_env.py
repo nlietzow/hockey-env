@@ -3,10 +3,12 @@ import math
 import random
 from enum import Enum
 from pathlib import Path
+from typing import Type
 
 import Box2D
 import gymnasium as gym
 import numpy as np
+
 # noinspection PyUnresolvedReferences
 from Box2D.b2 import (
     circleShape,
@@ -19,7 +21,7 @@ from Box2D.b2 import (
 from gymnasium import spaces
 from gymnasium.error import DependencyNotInstalled
 from gymnasium.utils import EzPickle, seeding
-from stable_baselines3 import SAC
+from stable_baselines3.common.base_class import BaseAlgorithm
 
 # import pyglet
 # from pyglet import gl
@@ -57,7 +59,7 @@ MAX_PUCK_SPEED = 25
 
 class OpponentType(Enum):
     rule_based = "rule_based"
-    baseline = "baseline"
+    checkpoint = "checkpoint"
     best = "best"
     random = "random"
 
@@ -546,10 +548,10 @@ class HockeyEnv(gym.Env, EzPickle):
                 and force[0] < 0
             )
             or (
-            not is_player_one
-            and player.position[0] > W / 2 + 210 / SCALE
-            and force[0] > 0
-        )
+                not is_player_one
+                and player.position[0] > W / 2 + 210 / SCALE
+                and force[0] > 0
+            )
             or (is_player_one and player.position[0] > W / 2 and force[0] > 0)
             or (not is_player_one and player.position[0] < W / 2 and force[0] < 0)
         ):  # Do not leave playing area to the left/right
@@ -857,7 +859,7 @@ class HockeyEnv(gym.Env, EzPickle):
         self._apply_rotation_action_with_max_speed(self.player1, action[2])
         player2_idx = 3 if not self.keep_mode else 4
         self._apply_translation_action_with_max_speed(
-            self.player2, action[player2_idx: player2_idx + 2], 10, False
+            self.player2, action[player2_idx : player2_idx + 2], 10, False
         )
         self._apply_rotation_action_with_max_speed(
             self.player2, action[player2_idx + 2]
@@ -1104,14 +1106,16 @@ class HockeyEnvWithOpponent(HockeyEnv):
     def __init__(
         self,
         opponent_type: OpponentType = OpponentType.rule_based,
-        baseline_path: Path = None,
+        algorithm_cls: Type[BaseAlgorithm] = None,
+        checkpoint_path: Path = None,
         checkpoint_dir: Path = None,
-        mode=Mode.NORMAL
+        mode=Mode.NORMAL,
     ):
         super().__init__(mode=mode)
 
         self.opponent_type = opponent_type
-        self.baseline_path = baseline_path
+        self.algorithm_cls = algorithm_cls
+        self.checkpoint_path = checkpoint_path
         self.checkpoint_dir = checkpoint_dir
         self.player_2 = self.init_player2()
 
@@ -1135,8 +1139,8 @@ class HockeyEnvWithOpponent(HockeyEnv):
     def init_player2(self):
         if self.opponent_type == OpponentType.rule_based:
             return self._init_rule_based()
-        if self.opponent_type == OpponentType.baseline:
-            return self._init_baseline()
+        if self.opponent_type == OpponentType.checkpoint:
+            return self._init_checkpoint()
         if self.opponent_type == OpponentType.best:
             return self._init_best()
 
@@ -1146,29 +1150,46 @@ class HockeyEnvWithOpponent(HockeyEnv):
     def _init_rule_based():
         return BasicOpponent(weak=False)
 
-    def _init_baseline(self):
-        if self.baseline_path is None:
-            raise ValueError("No baseline path provided")
-        return SAC.load(self.baseline_path)
+    def _assert_algorithm_cls(self):
+        if self.algorithm_cls is None:
+            raise ValueError("No algorithm class provided")
 
-    def _init_best(self):
+    def _assert_checkpoint_path(self):
+        if self.checkpoint_path is None:
+            raise ValueError("No checkpoint path provided")
+        if not self.checkpoint_path.is_file():
+            raise ValueError("Checkpoint path is not a file")
+
+    def _assert_checkpoint_dir(self):
         if self.checkpoint_dir is None:
             raise ValueError("No checkpoint directory provided")
+        if not self.checkpoint_dir.is_dir():
+            raise ValueError("Checkpoint dir is not a directory")
+
+    def _init_checkpoint(self):
+        self._assert_algorithm_cls()
+        self._assert_checkpoint_path()
+
+        return self.algorithm_cls.load(self.checkpoint_path)
+
+    def _init_best(self):
+        self._assert_algorithm_cls()
+        self._assert_checkpoint_dir()
 
         fp = self.checkpoint_dir / "best_model.zip"
         if fp.exists() and fp.is_file():
-            return SAC.load(fp)
+            return self.algorithm_cls.load(fp)
 
-        logging.warning("No checkpoints found. Using baseline model.")
-        return self._init_baseline()
+        logging.warning("No best checkpoint found. Using rule-based opponent.")
+        return self._init_rule_based()
 
     def _init_random(self):
-        if self.checkpoint_dir is None:
-            raise ValueError("No checkpoint directory provided")
+        self._assert_algorithm_cls()
+        self._assert_checkpoint_dir()
 
         checkpoints = [f for f in self.checkpoint_dir.glob("*.zip") if f.is_file()]
         if checkpoints:
-            return SAC.load(random.choice(checkpoints))
+            return self.algorithm_cls.load(random.choice(checkpoints))
 
-        logging.warning("No checkpoints found. Using baseline model.")
-        return self._init_baseline()
+        logging.warning("No checkpoints found. Using rule-based opponent.")
+        return self._init_rule_based()
