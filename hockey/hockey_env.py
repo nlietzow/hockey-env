@@ -8,7 +8,6 @@ from typing import Type
 import Box2D
 import gymnasium as gym
 import numpy as np
-
 # noinspection PyUnresolvedReferences
 from Box2D.b2 import (
     circleShape,
@@ -548,10 +547,10 @@ class HockeyEnv(gym.Env, EzPickle):
                 and force[0] < 0
             )
             or (
-                not is_player_one
-                and player.position[0] > W / 2 + 210 / SCALE
-                and force[0] > 0
-            )
+            not is_player_one
+            and player.position[0] > W / 2 + 210 / SCALE
+            and force[0] > 0
+        )
             or (is_player_one and player.position[0] > W / 2 and force[0] > 0)
             or (not is_player_one and player.position[0] < W / 2 and force[0] < 0)
         ):  # Do not leave playing area to the left/right
@@ -859,7 +858,7 @@ class HockeyEnv(gym.Env, EzPickle):
         self._apply_rotation_action_with_max_speed(self.player1, action[2])
         player2_idx = 3 if not self.keep_mode else 4
         self._apply_translation_action_with_max_speed(
-            self.player2, action[player2_idx : player2_idx + 2], 10, False
+            self.player2, action[player2_idx: player2_idx + 2], 10, False
         )
         self._apply_rotation_action_with_max_speed(
             self.player2, action[player2_idx + 2]
@@ -1115,9 +1114,14 @@ class HockeyEnvWithOpponent(HockeyEnv):
 
         self.opponent_type = opponent_type
         self.algorithm_cls = algorithm_cls
-        self.checkpoint_path = checkpoint_path
-        self.checkpoint_dir = checkpoint_dir
-        self.player_2 = self.init_player2()
+        self.checkpoint_path = checkpoint_path.resolve() if checkpoint_path else None
+        self.checkpoint_dir = checkpoint_dir.resolve() if checkpoint_dir else None
+
+        self.player_2 = (
+            self._init_rule_based()
+            if opponent_type == OpponentType.rule_based
+            else self._init_checkpoint()
+        )
 
         # linear force in (x,y)-direction, torque, and shooting
         self.action_space = spaces.Box(-1, +1, (4,), dtype=np.float32)
@@ -1129,67 +1133,44 @@ class HockeyEnvWithOpponent(HockeyEnv):
         return super().step(np.hstack([action, a2]))
 
     def update_player2(self):
+        if self.checkpoint_dir is None:
+            raise ValueError("No checkpoint directory provided")
+
+        if not self.checkpoint_dir.is_dir():
+            raise ValueError("Checkpoint dir is not a directory")
+
         if self.opponent_type == OpponentType.best:
-            self.player_2 = self._init_best()
+            self._update_best()
+
         elif self.opponent_type == OpponentType.random:
-            self.player_2 = self._init_random()
+            self._update_random()
 
         return None
-
-    def init_player2(self):
-        if self.opponent_type == OpponentType.rule_based:
-            return self._init_rule_based()
-        if self.opponent_type == OpponentType.checkpoint:
-            return self._init_checkpoint()
-        if self.opponent_type == OpponentType.best:
-            return self._init_best()
-
-        return self._init_random()
 
     @staticmethod
     def _init_rule_based():
         return BasicOpponent(weak=False)
 
-    def _assert_algorithm_cls(self):
+    def _init_checkpoint(self):
         if self.algorithm_cls is None:
             raise ValueError("No algorithm class provided")
-
-    def _assert_checkpoint_path(self):
         if self.checkpoint_path is None:
             raise ValueError("No checkpoint path provided")
         if not self.checkpoint_path.is_file():
             raise ValueError("Checkpoint path is not a file")
 
-    def _assert_checkpoint_dir(self):
-        if self.checkpoint_dir is None:
-            raise ValueError("No checkpoint directory provided")
-        if not self.checkpoint_dir.is_dir():
-            raise ValueError("Checkpoint dir is not a directory")
-
-    def _init_checkpoint(self):
-        self._assert_algorithm_cls()
-        self._assert_checkpoint_path()
-
         return self.algorithm_cls.load(self.checkpoint_path)
 
-    def _init_best(self):
-        self._assert_algorithm_cls()
-        self._assert_checkpoint_dir()
+    def _update_random(self):
+        checkpoints = [f for f in self.checkpoint_dir.glob("*.pkl") if f.is_file()]
+        if checkpoints:
+            self.player_2.set_parameters(str(random.choice(checkpoints)))
 
+        logging.warning("No checkpoints found. Skipping update of random opponent.")
+
+    def _update_best(self):
         fp = self.checkpoint_dir / "best_model.zip"
         if fp.exists() and fp.is_file():
-            return self.algorithm_cls.load(fp)
+            self.player_2.set_parameters(str(fp))
 
-        logging.warning("No best checkpoint found. Using rule-based opponent.")
-        return self._init_rule_based()
-
-    def _init_random(self):
-        self._assert_algorithm_cls()
-        self._assert_checkpoint_dir()
-
-        checkpoints = [f for f in self.checkpoint_dir.glob("*.zip") if f.is_file()]
-        if checkpoints:
-            return self.algorithm_cls.load(random.choice(checkpoints))
-
-        logging.warning("No checkpoints found. Using rule-based opponent.")
-        return self._init_rule_based()
+        logging.warning("No best checkpoint found. Skipping update of best opponent.")
