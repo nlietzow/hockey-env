@@ -9,6 +9,7 @@ from typing import Type
 import Box2D
 import gymnasium as gym
 import numpy as np
+
 # noinspection PyUnresolvedReferences
 from Box2D.b2 import (
     circleShape,
@@ -548,10 +549,10 @@ class HockeyEnv(gym.Env, EzPickle):
                 and force[0] < 0
             )
             or (
-            not is_player_one
-            and player.position[0] > W / 2 + 210 / SCALE
-            and force[0] > 0
-        )
+                not is_player_one
+                and player.position[0] > W / 2 + 210 / SCALE
+                and force[0] > 0
+            )
             or (is_player_one and player.position[0] > W / 2 and force[0] > 0)
             or (not is_player_one and player.position[0] < W / 2 and force[0] < 0)
         ):  # Do not leave playing area to the left/right
@@ -859,7 +860,7 @@ class HockeyEnv(gym.Env, EzPickle):
         self._apply_rotation_action_with_max_speed(self.player1, action[2])
         player2_idx = 3 if not self.keep_mode else 4
         self._apply_translation_action_with_max_speed(
-            self.player2, action[player2_idx: player2_idx + 2], 10, False
+            self.player2, action[player2_idx : player2_idx + 2], 10, False
         )
         self._apply_rotation_action_with_max_speed(
             self.player2, action[player2_idx + 2]
@@ -1160,24 +1161,29 @@ class HockeyEnvWithOpponent(HockeyEnv):
         if not self.checkpoint_path.is_file():
             raise ValueError("Checkpoint path is not a file")
 
-        return self.algorithm_cls.load(self.checkpoint_path)
+        return self.algorithm_cls.load(self.checkpoint_path, verbose=False)
 
     def _update_random(self):
-        checkpoints = [f for f in self.checkpoint_dir.glob("*.pkl") if f.is_file()]
-        if checkpoints:
+        if checkpoints := list(self.checkpoint_dir.glob("*.pkl")):
             with open(random.choice(checkpoints), "rb") as f:
                 params = pickle.load(f)
 
             self.player_2.set_parameters(params)
-
-        logging.warning("No checkpoints found. Skipping update of random opponent.")
+        else:
+            logging.warning(
+                "No checkpoints found in the directory. "
+                "Skipping update of random opponent."
+            )
 
     def _update_best(self):
-        fp = self.checkpoint_dir / "best_model.zip"
-        if fp.exists() and fp.is_file():
+        fp = self.checkpoint_dir / "best_model.pkl"
+        if fp.exists():
             with open(fp, "rb") as f:
                 params = pickle.load(f)
 
             self.player_2.set_parameters(params)
-
-        logging.warning("No best checkpoint found. Skipping update of best opponent.")
+        else:
+            logging.warning(
+                "No best model found in the directory. "
+                "Skipping update of best opponent."
+            )
