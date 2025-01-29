@@ -1109,6 +1109,7 @@ class HockeyEnvWithOpponent(HockeyEnv):
         algorithm_cls: Type[BaseAlgorithm] = None,
         checkpoint_path: Path = None,
         checkpoint_dir: Path = None,
+        print_init_type: bool = False,
         mode=Mode.NORMAL,
     ):
         super().__init__(mode=mode)
@@ -1127,13 +1128,16 @@ class HockeyEnvWithOpponent(HockeyEnv):
         # linear force in (x,y)-direction, torque, and shooting
         self.action_space = spaces.Box(-1, +1, (4,), dtype=np.float32)
 
+        if print_init_type:
+            print(f"Initialized opponent of type {opponent_type}")
+
     def step(self, action):
         ob2 = self.obs_agent_two()
         a2, _ = self.player_2.predict(ob2)
 
         return super().step(np.hstack([action, a2]))
 
-    def update_player2(self, verbose: int):
+    def update_player2(self):
         if self.checkpoint_dir is None:
             raise ValueError("No checkpoint directory provided")
         if not self.checkpoint_dir.exists():
@@ -1142,10 +1146,10 @@ class HockeyEnvWithOpponent(HockeyEnv):
             raise ValueError("Checkpoint dir is not a directory")
 
         if self.opponent_type == OpponentType.latest:
-            self._update_latest(verbose)
+            self._update_latest()
 
         elif self.opponent_type == OpponentType.random:
-            self._update_random(verbose)
+            self._update_random()
 
         return None
 
@@ -1165,27 +1169,21 @@ class HockeyEnvWithOpponent(HockeyEnv):
 
         return self.algorithm_cls.load(self.checkpoint_path, verbose=False)
 
-    def _update_random(self, verbose: int):
+    def _update_random(self):
         if checkpoints := list(self.checkpoint_dir.glob("*.pkl")):
             with open(random.choice(checkpoints), "rb") as f:
                 params = pickle.load(f)
 
             self.player_2.set_parameters(params)
-        elif verbose > 0:
-            print(
-                "No checkpoints found in the directory. "
-                "Skipping update of random opponent."
-            )
+        else:
+            raise ValueError("No checkpoints found in the directory.")
 
-    def _update_latest(self, verbose: int):
+    def _update_latest(self):
         fp = self.checkpoint_dir / "latest.pkl"
         if fp.exists():
             with open(fp, "rb") as f:
                 params = pickle.load(f)
 
             self.player_2.set_parameters(params)
-        elif verbose > 0:
-            print(
-                "No latest model found in the directory. "
-                "Skipping update of latest opponent."
-            )
+        else:
+            raise ValueError("No latest model found in the directory.")
