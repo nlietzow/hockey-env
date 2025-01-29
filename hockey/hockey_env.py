@@ -1165,8 +1165,6 @@ class HockeyEnvWithOpponent(HockeyEnv):
 
     def _update_random(self, verbose: int):
         if checkpoints := list(self.checkpoint_dir.glob("*.pkl")):
-            if verbose > 0:
-                print("Updating random opponent.")
             with open(random.choice(checkpoints), "rb") as f:
                 params = pickle.load(f)
 
@@ -1180,8 +1178,6 @@ class HockeyEnvWithOpponent(HockeyEnv):
     def _update_best(self, verbose: int):
         fp = self.checkpoint_dir / "best_model.pkl"
         if fp.exists():
-            if verbose > 0:
-                print("Updating best opponent.")
             with open(fp, "rb") as f:
                 params = pickle.load(f)
 
