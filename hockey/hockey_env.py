@@ -1,5 +1,6 @@
 import logging
 import math
+import pickle
 import random
 from enum import Enum
 from pathlib import Path
@@ -1164,13 +1165,19 @@ class HockeyEnvWithOpponent(HockeyEnv):
     def _update_random(self):
         checkpoints = [f for f in self.checkpoint_dir.glob("*.pkl") if f.is_file()]
         if checkpoints:
-            self.player_2.set_parameters(str(random.choice(checkpoints)))
+            with open(random.choice(checkpoints), "rb") as f:
+                params = pickle.load(f)
+
+            self.player_2.set_parameters(params)
 
         logging.warning("No checkpoints found. Skipping update of random opponent.")
 
     def _update_best(self):
         fp = self.checkpoint_dir / "best_model.zip"
         if fp.exists() and fp.is_file():
-            self.player_2.set_parameters(str(fp))
+            with open(fp, "rb") as f:
+                params = pickle.load(f)
+
+            self.player_2.set_parameters(params)
 
         logging.warning("No best checkpoint found. Skipping update of best opponent.")
