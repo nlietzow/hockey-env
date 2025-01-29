@@ -1109,6 +1109,7 @@ class HockeyEnvWithOpponent(HockeyEnv):
         algorithm_cls: Type[BaseAlgorithm] = None,
         checkpoint_path: Path = None,
         checkpoint_dir: Path = None,
+        verbose: int = 1,
         mode=Mode.NORMAL,
     ):
         super().__init__(mode=mode)
@@ -1133,7 +1134,7 @@ class HockeyEnvWithOpponent(HockeyEnv):
 
         return super().step(np.hstack([action, a2]))
 
-    def update_player2(self, logger):
+    def update_player2(self, verbose: int = 1):
         if self.checkpoint_dir is None:
             raise ValueError("No checkpoint directory provided")
 
@@ -1141,10 +1142,10 @@ class HockeyEnvWithOpponent(HockeyEnv):
             raise ValueError("Checkpoint dir is not a directory")
 
         if self.opponent_type == OpponentType.best:
-            self._update_best(logger)
+            self._update_best(verbose)
 
         elif self.opponent_type == OpponentType.random:
-            self._update_random(logger)
+            self._update_random(verbose)
 
         return None
 
@@ -1162,29 +1163,31 @@ class HockeyEnvWithOpponent(HockeyEnv):
 
         return self.algorithm_cls.load(self.checkpoint_path, verbose=False)
 
-    def _update_random(self, logger):
+    def _update_random(self, verbose: int):
         if checkpoints := list(self.checkpoint_dir.glob("*.pkl")):
-            logger.info("Updating random opponent.")
+            if verbose:
+                print("Updating random opponent.")
             with open(random.choice(checkpoints), "rb") as f:
                 params = pickle.load(f)
 
             self.player_2.set_parameters(params)
-        else:
-            logger.warning(
+        elif verbose:
+            print(
                 "No checkpoints found in the directory. "
                 "Skipping update of random opponent."
             )
 
-    def _update_best(self, logger):
+    def _update_best(self, verbose: int):
         fp = self.checkpoint_dir / "best_model.pkl"
         if fp.exists():
-            logger.info("Updating best opponent.")
+            if verbose:
+                print("Updating best opponent.")
             with open(fp, "rb") as f:
                 params = pickle.load(f)
 
             self.player_2.set_parameters(params)
-        else:
-            logger.warning(
+        elif verbose:
+            print(
                 "No best model found in the directory. "
                 "Skipping update of best opponent."
             )
