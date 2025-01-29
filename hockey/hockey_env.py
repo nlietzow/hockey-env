@@ -60,7 +60,7 @@ MAX_PUCK_SPEED = 25
 class OpponentType(Enum):
     rule_based = "rule_based"
     checkpoint = "checkpoint"
-    best = "best"
+    latest = "latest"
     random = "random"
 
 
@@ -1109,7 +1109,6 @@ class HockeyEnvWithOpponent(HockeyEnv):
         algorithm_cls: Type[BaseAlgorithm] = None,
         checkpoint_path: Path = None,
         checkpoint_dir: Path = None,
-        verbose: int = 1,
         mode=Mode.NORMAL,
     ):
         super().__init__(mode=mode)
@@ -1137,12 +1136,13 @@ class HockeyEnvWithOpponent(HockeyEnv):
     def update_player2(self, verbose: int):
         if self.checkpoint_dir is None:
             raise ValueError("No checkpoint directory provided")
-
+        if not self.checkpoint_dir.exists():
+            raise ValueError("Checkpoint directory does not exist")
         if not self.checkpoint_dir.is_dir():
             raise ValueError("Checkpoint dir is not a directory")
 
-        if self.opponent_type == OpponentType.best:
-            self._update_best(verbose)
+        if self.opponent_type == OpponentType.latest:
+            self._update_latest(verbose)
 
         elif self.opponent_type == OpponentType.random:
             self._update_random(verbose)
@@ -1158,6 +1158,8 @@ class HockeyEnvWithOpponent(HockeyEnv):
             raise ValueError("No algorithm class provided")
         if self.checkpoint_path is None:
             raise ValueError("No checkpoint path provided")
+        if not self.checkpoint_path.exists():
+            raise ValueError("Checkpoint path does not exist")
         if not self.checkpoint_path.is_file():
             raise ValueError("Checkpoint path is not a file")
 
@@ -1175,8 +1177,8 @@ class HockeyEnvWithOpponent(HockeyEnv):
                 "Skipping update of random opponent."
             )
 
-    def _update_best(self, verbose: int):
-        fp = self.checkpoint_dir / "best_model.pkl"
+    def _update_latest(self, verbose: int):
+        fp = self.checkpoint_dir / "latest.pkl"
         if fp.exists():
             with open(fp, "rb") as f:
                 params = pickle.load(f)
@@ -1184,6 +1186,6 @@ class HockeyEnvWithOpponent(HockeyEnv):
             self.player_2.set_parameters(params)
         elif verbose > 0:
             print(
-                "No best model found in the directory. "
-                "Skipping update of best opponent."
+                "No latest model found in the directory. "
+                "Skipping update of latest opponent."
             )
